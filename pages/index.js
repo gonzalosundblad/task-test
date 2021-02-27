@@ -1,53 +1,115 @@
 import Head from 'next/head'
+import { useEffect, useState } from 'react'
 import styles from '../styles/main.module.css'
+// import { tasks } from './api/tasks/_tasks'
+const axios = require('axios');
 
 export default function Home() {
+  
+const [id, setID] = useState(4);
+const [tasks, setTasks] = useState([]);
+const [edit, setEdit] = useState(false);
+const [newTask, setNewTask] = useState({id: null, title: '', complete: null, color: ''});
+
+
+function getRandomColor(){
+  let colorValues = ["red", "blue", "green", "yellow"];
+  return colorValues[Math.floor(Math.random() * colorValues.length)];
+}
+
+
+useEffect(async () => {
+  const resp = await axios.get('http://localhost:3000/api/tasks/list/any')
+  setTasks(resp.data)
+}, [])
+
+
+async function handleDelete(todoTask) {
+  console.log(todoTask)
+  try{
+    const request = await axios.get(`http://localhost:3000/api/tasks/delete/${todoTask.id}`);
+    console.log(request.data[0].id)
+    var filteredTasks = tasks.filter(t => t.id !== request.data[0].id);
+    console.log(request.data, filteredTasks)
+    setTasks(filteredTasks);
+  }
+  catch{
+    var updatedTasks = tasks.filter(t => t.id !== todoTask.id)
+    setTasks(updatedTasks)
+    console.log('error in request')
+  }
+}
+
+function handleComplete(todoTask) {
+  var upTasks = [...tasks];
+  upTasks[todoTask.id-1].complete = !upTasks[todoTask.id-1].complete
+  setTasks(upTasks)
+}
+
+
+async function handleEdit(e) {
+  e.preventDefault();
+  setEdit(true);
+}
+
+
+function handleChange(e) {
+  e.preventDefault();
+  setNewTask(e.target.value)
+}
+
+function handleSubmit(e) {
+  e.preventDefault();
+  setTasks([
+    ...tasks,
+    {id: id, title: newTask, complete: false, color: getRandomColor()}
+  ])
+  setID(id + 1);
+  mainInput.value = ''
+  setNewTask('')
+}
+
   return (
     <div className={styles.container}>
       <Head>
         <title>Next JS - Task Manager</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
       <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to Task Manager
-        </h1>
+        <div className={styles.box}>
+        <p>ToDo List</p>
+        
+        { edit && 
+        <h1>edittt</h1>
 
-        <p className={styles.description}>
-          This is based in: <a href="https://nextjs.org">Next.js!</a><br/>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.js</code>
-        </p>
+        }
+        { !edit &&
+        <ul>
+          {tasks.map((t, i) => 
+            <li>
+              <span className={styles.id}>
+                {i + 1}.
+              </span>
+              <span  style={{ color: t.color }} onClick={handleEdit} className={styles.task}>{t.title}</span>
+              
+              <span className={styles.complete}><button  style={t.complete? { background: 'green' } : {background: 'gray'}} onClick={(e) => {
+                                  e.preventDefault()
+                                  handleComplete(t)
+                              }}>✓</button> </span>
+              
+              <span className={styles.remove}><button onClick={(e) => {
+                                  e.preventDefault()
+                                  handleDelete(t)
+                              }}>x</button></span>
 
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
+            </li>)}
+        </ul>
+        }
+        <form>
 
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+        <input id='mainInput' type='text' onChange={handleChange}/>
+        <button onClick={handleSubmit}>Add task</button>
+        </form>
         </div>
       </main>
     </div>
